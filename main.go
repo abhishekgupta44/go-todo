@@ -25,10 +25,12 @@ var collection *mongo.Collection
 func main() {
 	fmt.Println("Hello, World!")
 
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatal("Error loading .env file", err)
-
+	if os.Getenv("ENV") != "production" {
+		// Load the .env file if not in production
+		err := godotenv.Load(".env")
+		if err != nil {
+			log.Fatal("Error loading .env file:", err)
+		}
 	}
 
 	MONGODB_URI := os.Getenv("MONGODB_URI")
@@ -52,6 +54,11 @@ func main() {
 
 	app := fiber.New()
 
+	// app.Use(cors.New(cors.Config{
+	// 	AllowOrigins: "http://localhost:5173",
+	// 	AllowHeaders: "Origin,Content-Type,Accept",
+	// }))
+
 	app.Get("/api/todos", getTodos)
 	app.Post("/api/todos", createTodo)
 	app.Put("/api/todos/:id", updateTodo)
@@ -60,6 +67,10 @@ func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "5000"
+	}
+
+	if os.Getenv("ENV") == "production" {
+		app.Static("/", "./client/dist")
 	}
 
 	log.Fatal(app.Listen("0.0.0.0:" + port))
@@ -111,7 +122,6 @@ func createTodo(c *fiber.Ctx) error {
 	return c.Status(201).JSON(todo)
 }
 
-
 // Handler to update a todo's completed status
 func updateTodo(c *fiber.Ctx) error {
 	id := c.Params("id")
@@ -132,7 +142,6 @@ func updateTodo(c *fiber.Ctx) error {
 	return c.Status(200).JSON(fiber.Map{"success": true})
 
 }
-
 
 // Handler to delete a todo
 func deleteTodo(c *fiber.Ctx) error {
